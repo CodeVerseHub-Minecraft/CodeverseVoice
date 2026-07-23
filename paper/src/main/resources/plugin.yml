@@ -1,0 +1,50 @@
+name: CodeverseVoice
+version: '${version}'
+main: net.codeverse.voice.paper.CodeverseVoicePaper
+api-version: '1.21'
+authors: [CodeVerseHub-Minecraft Subteam]
+description: Voice chat moderation with network wide identities, menus and placeholders
+website: https://github.com/CodeVerseHub-Minecraft/CodeverseVoice
+softdepend: [voicechat, LuckPerms, PlaceholderAPI]
+folia-supported: false
+
+commands:
+  voice:
+    description: Voice chat moderation
+    usage: /voice <gui|ban|unban|check|history|monitor|capture|presets|status>
+    aliases: [vc, voicemod]
+
+permissions:
+  codeverse.voice.speak:
+    description: Allows speaking in voice chat. Deny this to untrusted groups.
+    default: true
+  codeverse.voice.ban:
+    description: Allows restricting and unrestricting voice chat access
+    default: op
+  codeverse.voice.check:
+    description: Allows viewing restrictions, history, menus and plugin status
+    default: op
+  codeverse.voice.capture:
+    description: Allows capturing buffered audio as evidence
+    default: op
+  codeverse.voice.monitor:
+    description: Allows listening to what another player hears
+    default: op
+  codeverse.voice.monitor.notify:
+    description: Receives a notification when a monitoring session starts
+    default: op
+  codeverse.voice.notify:
+    description: Receives staff notifications about restrictions
+    default: op
+  codeverse.voice.group.create:
+    description: Allows creating voice groups when group permissions are enforced
+    default: true
+  codeverse.voice.group.join:
+    description: Allows joining voice groups when group permissions are enforced
+    default: true
+  codeverse.voice.range.extended:
+    description: Grants an extended proximity range when ranges are enabled
+    default: false
+  codeverse.voice.range.staff:
+    description: Grants the widest proximity range when ranges are enabled
+    default: false

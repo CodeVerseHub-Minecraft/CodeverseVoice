@@ -1,0 +1,201 @@
+{
+  "voice": {
+    "allowed": "<gray>Voice Chat ist verfügbar.</gray>",
+    "recording-notice": [
+      "<gray>Der Voice Chat auf diesem Server behält die letzten Sekunden im Arbeitsspeicher, damit das Team Meldungen prüfen kann.</gray>",
+      "<gray>Gespeichert wird nur, wenn ein Teammitglied einen Vorfall sichert, und Aufnahmen werden automatisch gelöscht.</gray>"
+    ],
+    "you-were-banned": [
+      "<red>Dein Zugang zum Voice Chat wurde eingeschränkt.</red>",
+      "<gray>Dauer: <white><duration></white></gray>",
+      "<gray>Grund: <white><reason></white></gray>"
+    ],
+    "denied": {
+      "banned": "<red>Dein Zugang zum Voice Chat ist derzeit eingeschränkt.</red>",
+      "untrusted": "<red>Voice Chat ist nur mit verifizierten Accounts verfügbar.</red>",
+      "no-permission": "<red>Du hast keinen Zugang zum Voice Chat.</red>",
+      "unknown-identity": "<red>Dein Account konnte nicht verifiziert werden, daher ist Voice Chat nicht verfügbar. Bitte verbinde dich neu.</red>"
+    },
+    "you-were-unbanned": "<green>Dein Zugang zum Voice Chat wurde wiederhergestellt.</green>",
+    "restriction-expired": "<green>Deine Voice Chat Einschränkung ist abgelaufen.</green>",
+    "join-reminder": [
+      "<gold>Dein Voice Chat Zugang ist noch <white><remaining></white> eingeschränkt.</gold>",
+      "<gray>Grund: <white><reason></white></gray>"
+    ]
+  },
+  "group": {
+    "denied": {
+      "create": "<red>Du darfst keine Voice Gruppen erstellen.</red>",
+      "join": "<red>Du darfst keinen Voice Gruppen beitreten.</red>",
+      "restricted": "<red>Du kannst keiner Voice Gruppe beitreten, solange dein Zugang eingeschränkt ist.</red>",
+      "name-too-long": "<red>Dieser Gruppenname ist zu lang.</red>",
+      "name-blocked": "<red>Dieser Gruppenname ist nicht erlaubt.</red>"
+    }
+  },
+  "monitor": {
+    "started": "<green>Du hörst jetzt <white><name></white> für <white><seconds></white> Sekunden mit.</green>",
+    "stopped": "<gray>Mithören beendet.</gray>",
+    "auto-stopped": "<gray>Mithören wurde automatisch beendet.</gray>",
+    "ending-soon": "<gold>Mithören endet in <white><seconds></white> Sekunden. Nutze <white>/voice monitor extend</white> zum Verlängern.</gold>",
+    "extended": "<green>Mithören um <white><seconds></white> Sekunden verlängert.</green>",
+    "not-monitoring": "<gray>Du hörst derzeit niemandem zu.</gray>",
+    "already-active": "<red>Du hörst bereits jemandem zu. Beende zuerst diese Sitzung.</red>",
+    "cannot-self": "<red>Du kannst dir nicht selbst zuhören.</red>",
+    "disabled": "<gray>Mithören ist auf diesem Server deaktiviert.</gray>",
+    "audit-failed": "<gold>Warnung: Diese Sitzung konnte nicht im Protokoll gespeichert werden.</gold>",
+    "staff-announcement": "<gray>[Voice] <white><staff></white> hört jetzt <white><target></white> mit.</gray>",
+    "extension-limit": "<red>Du hast das Limit von <white><limit></white> Verlängerungen erreicht.</red>",
+    "countdown": "<gray>Hörst <white><name></white> mit, noch <white><seconds></white>s</gray>"
+  },
+  "capture": {
+    "success": [
+      "<green>Audio von <white><name></white> gesichert.</green>",
+      "<gray>Gespeichert als <white><file></white>, wird nach <white><days></white> Tagen automatisch gelöscht.</gray>"
+    ],
+    "nothing-buffered": "<gray>Für <white><name></white> liegt kein aktuelles Audio vor.</gray>",
+    "disabled": "<gray>Audioaufzeichnung ist auf diesem Server deaktiviert.</gray>",
+    "over-budget": "<gold>Der Aufnahmespeicher liegt bei <white><used></white> MB und damit über dem Limit von <white><budget></white> MB.</gold>"
+  },
+  "command": {
+    "usage": [
+      "<gray>Voice Moderation:</gray>",
+      "<gray>  <white>/voice gui &lt;spieler&gt;</white> Moderationsmenü öffnen</gray>",
+      "<gray>  <white>/voice ban &lt;spieler&gt; &lt;dauer&gt; &lt;grund&gt;</white></gray>",
+      "<gray>  <white>/voice unban &lt;spieler&gt;</white></gray>",
+      "<gray>  <white>/voice check &lt;spieler&gt;</white></gray>",
+      "<gray>  <white>/voice history &lt;spieler&gt;</white></gray>",
+      "<gray>  <white>/voice presets &lt;spieler&gt;</white></gray>",
+      "<gray>  <white>/voice monitor &lt;spieler|stop|extend&gt;</white></gray>",
+      "<gray>  <white>/voice capture &lt;spieler&gt; [notiz]</white></gray>",
+      "<gray>  <white>/voice status</white></gray>"
+    ],
+    "no-permission": "<red>Dazu hast du keine Berechtigung.</red>",
+    "players-only": "<red>Dieser Befehl funktioniert nur im Spiel.</red>",
+    "unknown-player": "<red>Kein Spieler namens <white><name></white> gefunden.</red>",
+    "bad-duration": "<red><white><input></white> ist keine gültige Dauer. Versuche 30m, 2h, 7d oder perm.</red>",
+    "storage-error": "<red>Das war nicht möglich, weil der Speicher nicht erreichbar ist.</red>",
+    "ban": {
+      "usage": "<gray>Verwendung: <white>/voice ban &lt;spieler&gt; &lt;dauer&gt; &lt;grund&gt;</white></gray>",
+      "success": "<green><white><name></white> für <white><duration></white> eingeschränkt: <reason></green>"
+    },
+    "unban": {
+      "usage": "<gray>Verwendung: <white>/voice unban &lt;spieler&gt;</white></gray>",
+      "success": "<green>Voice Zugang für <white><name></white> wiederhergestellt.</green>",
+      "not-banned": "<gray><name> hat keine aktive Voice Einschränkung.</gray>"
+    },
+    "check": {
+      "usage": "<gray>Verwendung: <white>/voice check &lt;spieler&gt;</white></gray>",
+      "clear": "<green><name> hat keine Voice Einschränkung. Vertrauensstufe: <white><tier></white>.</green>",
+      "banned": "<red><name> ist noch <white><remaining></white> eingeschränkt. Grund: <white><reason></white></red>"
+    },
+    "history": {
+      "usage": "<gray>Verwendung: <white>/voice history &lt;spieler&gt;</white></gray>",
+      "header": "<gray>Letzte <white><count></white> Einschränkungen von <white><name></white>:</gray>",
+      "entry": "<gray>  <state> <white><reason></white></gray>",
+      "empty": "<gray><name> hat keine Voice Einschränkungen.</gray>"
+    },
+    "monitor": {
+      "usage": "<gray>Verwendung: <white>/voice monitor &lt;spieler&gt;</white>, stop, extend</gray>"
+    },
+    "capture": {
+      "usage": "<gray>Verwendung: <white>/voice capture &lt;spieler&gt; [notiz]</white></gray>"
+    },
+    "status": [
+      "<gray>Status der Voice Moderation:</gray>",
+      "<gray>  Modus: <white><mode></white></gray>",
+      "<gray>  Identitäten: <white><identities></white></gray>",
+      "<gray>  Server übergreifende Synchronisierung: <white><sync></white></gray>",
+      "<gray>  Aktive Mithör Sitzungen: <white><monitors></white></gray>",
+      "<gray>  Gespeicherte Aufnahmen: <white><recordings></white> MB</gray>"
+    ],
+    "status-only-notice": "<gray>Dieser Server hostet keinen Voice Chat, daher sind hier nur Status und Einschränkungen verfügbar.</gray>",
+    "requires-voice-server": "<red>Diese Aktion benötigt den Server, der den Voice Chat hostet.</red>",
+    "gui": {
+      "usage": "<gray>Verwendung: <white>/voice gui &lt;spieler&gt;</white></gray>"
+    },
+    "presets": {
+      "usage": "<gray>Verwendung: <white>/voice presets &lt;spieler&gt;</white></gray>"
+    },
+    "proxy": {
+      "usage": [
+        "<gray>Netzwerkweite Voice Moderation:</gray>",
+        "<gray>  <white>/voice ban &lt;spieler&gt; &lt;dauer&gt; &lt;grund&gt;</white></gray>",
+        "<gray>  <white>/voice unban &lt;spieler&gt;</white></gray>",
+        "<gray>  <white>/voice check &lt;spieler&gt;</white></gray>",
+        "<gray>Mithören und Sichern gibt es nur auf dem Voice Server.</gray>"
+      ]
+    }
+  },
+  "duration": {
+    "permanent": "dauerhaft"
+  },
+  "state": {
+    "active": "<red>aktiv</red>",
+    "inactive": "<dark_gray>abgelaufen</dark_gray>"
+  },
+  "status": {
+    "linked": "mit Netzwerk Accounts verknüpft",
+    "fallback": "pro Minecraft Account",
+    "connected": "verbunden",
+    "offline": "offline",
+    "disabled": "deaktiviert",
+    "full": "vollständige Moderation",
+    "status-only": "nur Status"
+  },
+  "notify": {
+    "staff": {
+      "ban": "<gray>[Voice] <white><staff></white> hat <white><target></white> für <white><duration></white> eingeschränkt: <reason></gray>",
+      "unban": "<gray>[Voice] <white><staff></white> hat den Voice Zugang von <white><target></white> wiederhergestellt.</gray>"
+    },
+    "broadcast": {
+      "ban": "<gray><target> wurde für <white><duration></white> vom Voice Chat ausgeschlossen.</gray>",
+      "unban": "<gray><target> kann den Voice Chat wieder nutzen.</gray>"
+    }
+  },
+  "gui": {
+    "close": "<red>Schließen</red>",
+    "unknown": "unbekannt",
+    "disabled": "<gray>Das Moderationsmenü ist auf diesem Server deaktiviert.</gray>",
+    "presets-disabled": "<gray>Vorlagen sind auf diesem Server deaktiviert.</gray>",
+    "player": {
+      "title": "<dark_gray>Voice: <name>",
+      "head": "<white><name></white>",
+      "tier": "<gray>Vertrauensstufe: <white><tier></white></gray>",
+      "status-restricted": "<red>Derzeit eingeschränkt</red>",
+      "status-active": "<green>Voice Zugang aktiv</green>",
+      "ban-for": "<red>Für <duration> einschränken</red>",
+      "ban-for-lore": "<gray>Grund: <white><reason></white></gray>",
+      "currently-restricted": "<red>Derzeit eingeschränkt</red>",
+      "restriction-reason": "<gray>Grund: <white><reason></white></gray>",
+      "restriction-remaining": "<gray>Verbleibend: <white><remaining></white></gray>",
+      "unban": "<green>Einschränkung aufheben</green>",
+      "unban-confirm": "<yellow>Zum Bestätigen erneut klicken</yellow>",
+      "unban-lore": "<gray>Stellt den Voice Zugang sofort wieder her.</gray>",
+      "presets": "<gold>Grundvorlagen</gold>",
+      "presets-lore": "<gray>Mit einem abgestimmten Grund einschränken.</gray>",
+      "history": "<aqua>Verlauf</aqua>",
+      "history-lore": "<gray>Frühere Einschränkungen, neueste zuerst.</gray>",
+      "monitor": "<light_purple>Mithören</light_purple>",
+      "monitor-lore": "<gray>Höre <white><seconds></white> Sekunden lang mit.</gray>",
+      "capture": "<yellow>Audio sichern</yellow>",
+      "capture-lore": "<gray>Sichert die letzten <white><seconds></white> Sekunden.</gray>"
+    },
+    "presets": {
+      "title": "<dark_gray>Gründe: <name>",
+      "entry": "<red><reason></red>",
+      "entry-duration": "<gray>Dauer: <white><duration></white></gray>",
+      "entry-hint": "<dark_gray>Zum Anwenden klicken</dark_gray>"
+    },
+    "history": {
+      "title": "<dark_gray>Verlauf: <name>",
+      "entry": "<white>Einschränkung #<index></white>",
+      "reason": "<gray>Grund: <white><reason></white></gray>",
+      "issued": "<gray>Erteilt: <white><when></white> UTC</gray>",
+      "expires": "<gray>Läuft ab: <white><when></white> UTC</gray>",
+      "permanent": "<gray>Dauerhaft</gray>",
+      "state-active": "<red>Aktiv</red>",
+      "state-inactive": "<dark_gray>Nicht mehr in Kraft</dark_gray>",
+      "empty": "<green><name> hat keinen Verlauf.</green>"
+    }
+  }
+}
