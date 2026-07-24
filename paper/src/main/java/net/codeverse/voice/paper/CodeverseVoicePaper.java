@@ -1,7 +1,13 @@
 package net.codeverse.voice.paper;
 
+import net.codeverse.api.CodeverseApiProvider;
+import net.codeverse.api.identity.IdentityService;
+import net.codeverse.jdbc.JdbcIdentityService;
+import net.codeverse.voice.api.BackendCodeverseApi;
+import net.codeverse.voice.api.LocalEventBus;
 import net.codeverse.voice.config.PluginConfig;
 import net.codeverse.voice.lang.LangManager;
+import net.codeverse.voice.moderation.CodeverseVoiceService;
 import net.codeverse.voice.moderation.VoiceBanService;
 import net.codeverse.voice.paper.command.VoiceCommand;
 import net.codeverse.voice.paper.gui.MenuListener;
@@ -11,7 +17,7 @@ import net.codeverse.voice.paper.listener.PlayerSessionListener;
 import net.codeverse.voice.paper.notify.NotificationService;
 import net.codeverse.voice.paper.placeholder.VoicePlaceholders;
 import net.codeverse.voice.storage.Database;
-import net.codeverse.voice.storage.IdentityLookup;
+import net.codeverse.voice.storage.IdentityResolver;
 import net.codeverse.voice.storage.VoiceBanRepository;
 import net.codeverse.voice.sync.VoiceSync;
 import org.bukkit.Bukkit;
@@ -52,7 +58,12 @@ public final class CodeverseVoicePaper extends JavaPlugin {
     private Database database;
     private VoiceSync sync;
     private VoiceBanService bans;
-    private IdentityLookup identities;
+    private IdentityResolver identities;
+    private JdbcIdentityService jdbcIdentities;
+    private CodeverseVoiceService voiceService;
+    private BackendCodeverseApi backendApi;
+    private LocalEventBus eventBus;
+    private java.util.concurrent.ExecutorService identityExecutor;
     private NotificationService notifications;
     private VoiceHooks hooks = VoiceHooks.ABSENT;
 
@@ -67,18 +78,37 @@ public final class CodeverseVoicePaper extends JavaPlugin {
             database.applySchema();
 
             VoiceBanRepository repository = new VoiceBanRepository(database);
-            identities = new IdentityLookup(database, config.identity);
 
-            if (config.identity.useAuthPluginIdentities && !identities.probe()) {
+            identityExecutor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
+            jdbcIdentities = new JdbcIdentityService(
+                    database.dataSource(),
+                    identityExecutor,
+                    config.identity.accountsTable,
+                    java.time.Duration.ofSeconds(Math.max(30, config.identity.cacheSeconds)));
+
+            boolean linkage = config.identity.useAuthPluginIdentities && jdbcIdentities.probe();
+            if (config.identity.useAuthPluginIdentities && !linkage) {
                 LOGGER.error("The accounts table '{}' could not be read. Voice restrictions will be keyed to "
                                 + "individual Minecraft accounts instead of network identities, which means "
                                 + "someone can evade a restriction by switching between their linked accounts. "
                                 + "Check storage settings and that the authentication plugin has run at least once.",
                         config.identity.accountsTable);
             }
+            identities = new IdentityResolver(jdbcIdentities, linkage);
 
-            bans = new VoiceBanService(repository, identities, config.access);
+            bans = new VoiceBanService(repository, jdbcIdentities, linkage, config.access);
             notifications = new NotificationService(config, lang);
+
+            // A backend enforces, so it registers a VoiceService that reports
+            // isEnforcing true. The shared API is registered here rather than
+            // provided by CodeverseAuth, because CodeverseAuth runs on the
+            // proxy and this is a backend: the jdbc identity service and this
+            // voice service together are this server's whole provider.
+            eventBus = new LocalEventBus(LOGGER);
+            voiceService = new CodeverseVoiceService(
+                    bans, jdbcIdentities, config.access, linkage, true, identityExecutor);
+            backendApi = new BackendCodeverseApi(jdbcIdentities, voiceService, eventBus);
+            CodeverseApiProvider.register(backendApi);
 
             sync = new VoiceSync(config.redis);
             if (config.redis.enabled && !sync.start(bans::invalidate, bans::invalidateAll)) {
@@ -168,7 +198,7 @@ public final class CodeverseVoicePaper extends JavaPlugin {
             // Keeps the placeholder cache warm for everyone online, so a
             // scoreboard never has to wait on a lookup it cannot perform.
             for (Player online : Bukkit.getOnlinePlayers()) {
-                bans.preload(identities.resolve(online.getUniqueId()).internalId());
+                bans.preload(identities.resolveThrough(online.getUniqueId()).internalId());
             }
         }, 20L * 30L, 20L * 60L * 5L);
 
@@ -184,11 +214,19 @@ public final class CodeverseVoicePaper extends JavaPlugin {
     }
 
     private void shutdownResources() {
+        if (backendApi != null) {
+            CodeverseApiProvider.unregister(backendApi);
+            backendApi = null;
+            voiceService = null;
+        }
         if (hooks != null) {
             hooks.shutdown();
         }
         if (sync != null) {
             sync.close();
+        }
+        if (identityExecutor != null) {
+            identityExecutor.shutdownNow();
         }
         if (database != null) {
             database.close();

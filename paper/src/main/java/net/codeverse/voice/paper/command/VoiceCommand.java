@@ -9,7 +9,7 @@ import net.codeverse.voice.paper.gui.PlayerMenu;
 import net.codeverse.voice.paper.gui.PresetMenu;
 import net.codeverse.voice.paper.hook.VoiceHooks;
 import net.codeverse.voice.paper.notify.NotificationService;
-import net.codeverse.voice.storage.IdentityLookup;
+import net.codeverse.voice.storage.IdentityResolver;
 import net.codeverse.voice.sync.VoiceSync;
 import net.codeverse.voice.util.DurationParser;
 import org.bukkit.Bukkit;
@@ -49,7 +49,7 @@ public final class VoiceCommand implements CommandExecutor, TabCompleter, Player
     private final PluginConfig config;
     private final VoiceBanService bans;
     private final VoiceHooks hooks;
-    private final IdentityLookup identities;
+    private final IdentityResolver identities;
     private final VoiceSync sync;
     private final NotificationService notifications;
     private final LangManager lang;
@@ -59,7 +59,7 @@ public final class VoiceCommand implements CommandExecutor, TabCompleter, Player
                         PluginConfig config,
                         VoiceBanService bans,
                         VoiceHooks hooks,
-                        IdentityLookup identities,
+                        IdentityResolver identities,
                         VoiceSync sync,
                         NotificationService notifications,
                         LangManager lang,
@@ -133,10 +133,11 @@ public final class VoiceCommand implements CommandExecutor, TabCompleter, Player
         OfflinePlayer resolved = target.get();
 
         async(() -> {
-            IdentityLookup.Resolved identity = identities.resolve(resolved.getUniqueId());
+            IdentityResolver.Resolved identity = identities.resolveThrough(resolved.getUniqueId());
             Optional<VoiceBan> ban = bans.activeBan(identity.internalId());
             Bukkit.getScheduler().runTask(plugin, () -> new PlayerMenu(config, lang, this,
-                    resolved.getUniqueId(), displayName(resolved), ban, identity.tier(), staff.locale())
+                    resolved.getUniqueId(), displayName(resolved), ban,
+                    identity.tier() == null ? null : identity.tier().name(), staff.locale())
                     .open(staff));
         });
     }
@@ -202,7 +203,7 @@ public final class VoiceCommand implements CommandExecutor, TabCompleter, Player
     @Override
     public void openHistory(Player staff, UUID targetMinecraftId, String targetName) {
         async(() -> {
-            UUID internalId = identities.resolve(targetMinecraftId).internalId();
+            UUID internalId = identities.resolveThrough(targetMinecraftId).internalId();
             try {
                 List<VoiceBan> history = bans.history(internalId, config.gui.historyPageSize);
                 Bukkit.getScheduler().runTask(plugin, () ->
@@ -254,7 +255,7 @@ public final class VoiceCommand implements CommandExecutor, TabCompleter, Player
 
     private void applyBan(CommandSender sender, UUID targetMinecraftId, String targetName,
                           long duration, String reason) {
-        UUID targetInternal = identities.resolve(targetMinecraftId).internalId();
+        UUID targetInternal = identities.resolveThrough(targetMinecraftId).internalId();
         UUID issuerInternal = internalIdOf(sender);
         try {
             VoiceBan ban = bans.ban(targetInternal, reason, issuerInternal, duration);
@@ -297,7 +298,7 @@ public final class VoiceCommand implements CommandExecutor, TabCompleter, Player
     }
 
     private void applyUnban(CommandSender sender, UUID targetMinecraftId, String targetName) {
-        UUID targetInternal = identities.resolve(targetMinecraftId).internalId();
+        UUID targetInternal = identities.resolveThrough(targetMinecraftId).internalId();
         try {
             boolean lifted = bans.unban(targetInternal, internalIdOf(sender));
             sync.publishInvalidate(targetInternal);
@@ -333,13 +334,13 @@ public final class VoiceCommand implements CommandExecutor, TabCompleter, Player
             sender.sendMessage(lang.get("command.unknown-player", localeOf(sender), "name", args[0]));
             return;
         }
-        IdentityLookup.Resolved resolved = identities.resolve(target.get().getUniqueId());
+        IdentityResolver.Resolved resolved = identities.resolveThrough(target.get().getUniqueId());
         Optional<VoiceBan> ban = bans.activeBan(resolved.internalId());
 
         if (ban.isEmpty()) {
             sender.sendMessage(lang.get("command.check.clear", localeOf(sender),
                     "name", displayName(target.get()),
-                    "tier", resolved.tier() == null ? "unknown" : resolved.tier()));
+                    "tier", resolved.tier() == null ? "unknown" : resolved.tier().name()));
             return;
         }
         VoiceBan active = ban.get();
@@ -365,7 +366,7 @@ public final class VoiceCommand implements CommandExecutor, TabCompleter, Player
             sender.sendMessage(lang.get("command.unknown-player", localeOf(sender), "name", args[0]));
             return;
         }
-        UUID internalId = identities.resolve(target.get().getUniqueId()).internalId();
+        UUID internalId = identities.resolveThrough(target.get().getUniqueId()).internalId();
         try {
             List<VoiceBan> history = bans.history(internalId, 10);
             if (history.isEmpty()) {
@@ -444,8 +445,8 @@ public final class VoiceCommand implements CommandExecutor, TabCompleter, Player
             staff.sendMessage(lang.get("monitor.cannot-self", staff.locale()));
             return;
         }
-        UUID staffInternal = identities.resolve(staff.getUniqueId()).internalId();
-        UUID targetInternal = identities.resolve(targetMinecraftId).internalId();
+        UUID staffInternal = identities.resolveThrough(staff.getUniqueId()).internalId();
+        UUID targetInternal = identities.resolveThrough(targetMinecraftId).internalId();
 
         VoiceHooks.MonitorOutcome outcome = hooks.startMonitor(
                 staff.getUniqueId(), staffInternal, targetMinecraftId, targetInternal, targetName);
@@ -500,7 +501,7 @@ public final class VoiceCommand implements CommandExecutor, TabCompleter, Player
             sender.sendMessage(lang.get("capture.disabled", localeOf(sender)));
             return;
         }
-        UUID targetInternal = identities.resolve(targetMinecraftId).internalId();
+        UUID targetInternal = identities.resolveThrough(targetMinecraftId).internalId();
         Optional<String> file = hooks.capture(targetMinecraftId, targetInternal, internalIdOf(sender), note);
         if (file.isEmpty()) {
             sender.sendMessage(lang.get("capture.nothing-buffered", localeOf(sender), "name", targetName));
@@ -558,7 +559,7 @@ public final class VoiceCommand implements CommandExecutor, TabCompleter, Player
     }
 
     private UUID internalIdOf(CommandSender sender) {
-        return sender instanceof Player player ? identities.resolve(player.getUniqueId()).internalId() : null;
+        return sender instanceof Player player ? identities.resolveThrough(player.getUniqueId()).internalId() : null;
     }
 
     private static String senderName(CommandSender sender) {

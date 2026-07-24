@@ -14,7 +14,8 @@ import de.maxhenkel.voicechat.api.events.VoiceDistanceEvent;
 import de.maxhenkel.voicechat.api.events.VoicechatServerStartedEvent;
 import net.codeverse.voice.config.PluginConfig;
 import net.codeverse.voice.lang.LangManager;
-import net.codeverse.voice.model.VoiceState;
+import net.codeverse.api.voice.VoiceAccess;
+import net.codeverse.voice.lang.VoiceDenial;
 import net.codeverse.voice.paper.moderation.MonitorService;
 import net.codeverse.voice.paper.moderation.RecordingService;
 import net.codeverse.voice.moderation.VoiceBanService;
@@ -111,7 +112,7 @@ public final class CodeverseVoicechatPlugin implements VoicechatPlugin {
         }
         UUID speakerId = sender.getPlayer().getUuid();
 
-        VoiceState state = bans.evaluate(speakerId, permission -> hasPermission(speakerId, permission));
+        VoiceAccess state = bans.evaluate(speakerId, permission -> hasPermission(speakerId, permission));
         if (!state.allowed()) {
             event.cancel();
             notifyDenied(speakerId, state);
@@ -156,7 +157,7 @@ public final class CodeverseVoicechatPlugin implements VoicechatPlugin {
             }
         }
 
-        VoiceState state = bans.evaluate(playerId, permission -> hasPermission(playerId, permission));
+        VoiceAccess state = bans.evaluate(playerId, permission -> hasPermission(playerId, permission));
         if (!state.allowed()) {
             notifyDenied(playerId, state);
         }
@@ -214,8 +215,8 @@ public final class CodeverseVoicechatPlugin implements VoicechatPlugin {
 
         // A restricted speaker may still listen, but joining a group while
         // restricted invites confusion about why nobody can hear them.
-        VoiceState state = bans.evaluate(playerId, permission -> hasPermission(playerId, permission));
-        if (state == VoiceState.BANNED) {
+        VoiceAccess state = bans.evaluate(playerId, permission -> hasPermission(playerId, permission));
+        if (state == VoiceAccess.RESTRICTED) {
             event.cancel();
             sendMessage(playerId, "group.denied.restricted");
             return;
@@ -227,7 +228,7 @@ public final class CodeverseVoicechatPlugin implements VoicechatPlugin {
     }
 
     /** Rate limited so a restricted speaker is told once, not fifty times a second. */
-    private void notifyDenied(UUID playerId, VoiceState state) {
+    private void notifyDenied(UUID playerId, VoiceAccess state) {
         long now = System.currentTimeMillis();
         long cooldown = config.access.denialNoticeCooldownSeconds * 1000L;
         Long last = denialNotices.get(playerId);
@@ -237,7 +238,7 @@ public final class CodeverseVoicechatPlugin implements VoicechatPlugin {
         denialNotices.put(playerId, now);
         Player player = Bukkit.getPlayer(playerId);
         if (player != null) {
-            notifications.sendDenial(player, state.messageKey());
+            notifications.sendDenial(player, VoiceDenial.messageKey(state));
         }
     }
 

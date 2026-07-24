@@ -4,7 +4,7 @@ import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import net.codeverse.voice.config.PluginConfig;
 import net.codeverse.voice.model.VoiceBan;
 import net.codeverse.voice.moderation.VoiceBanService;
-import net.codeverse.voice.storage.IdentityLookup;
+import net.codeverse.voice.storage.IdentityResolver;
 import net.codeverse.voice.util.DurationParser;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -42,10 +42,10 @@ public final class VoicePlaceholders extends PlaceholderExpansion {
 
     private final PluginConfig config;
     private final VoiceBanService bans;
-    private final IdentityLookup identities;
+    private final IdentityResolver identities;
     private final String version;
 
-    public VoicePlaceholders(PluginConfig config, VoiceBanService bans, IdentityLookup identities, String version) {
+    public VoicePlaceholders(PluginConfig config, VoiceBanService bans, IdentityResolver identities, String version) {
         this.config = config;
         this.bans = bans;
         this.identities = identities;
@@ -79,7 +79,7 @@ public final class VoicePlaceholders extends PlaceholderExpansion {
             return "";
         }
         UUID minecraftId = player.getUniqueId();
-        IdentityLookup.Resolved resolved = identities.resolveCached(minecraftId);
+        IdentityResolver.Resolved resolved = identities.resolveCached(minecraftId);
         if (resolved == null) {
             // Nothing cached yet. Returning the loading label rather than an
             // empty string keeps a scoreboard from flickering blank on join.
@@ -110,7 +110,7 @@ public final class VoicePlaceholders extends PlaceholderExpansion {
                 yield String.valueOf(ban.get().remainingMillis(now) / 1000L);
             }
             case "reason" -> restricted ? ban.get().reason() : config.placeholders.noRestriction;
-            case "tier" -> resolved.tier() == null ? config.placeholders.noRestriction : resolved.tier();
+            case "tier" -> resolved.tier() == null ? config.placeholders.noRestriction : resolved.tier().name();
             case "can_speak" -> {
                 if (!(player instanceof Player online)) {
                     yield String.valueOf(!restricted);

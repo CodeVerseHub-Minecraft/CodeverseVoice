@@ -9,7 +9,7 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import net.codeverse.voice.lang.LangManager;
 import net.codeverse.voice.model.VoiceBan;
 import net.codeverse.voice.moderation.VoiceBanService;
-import net.codeverse.voice.storage.IdentityLookup;
+import net.codeverse.voice.storage.IdentityResolver;
 import net.codeverse.voice.sync.VoiceSync;
 import net.codeverse.voice.util.DurationParser;
 import org.slf4j.Logger;
@@ -28,14 +28,14 @@ import java.util.UUID;
 public final class ProxyVoiceCommand {
 
     private final VoiceBanService bans;
-    private final IdentityLookup identities;
+    private final IdentityResolver identities;
     private final VoiceSync sync;
     private final LangManager lang;
     private final ProxyServer proxy;
     private final Logger logger;
 
     public ProxyVoiceCommand(VoiceBanService bans,
-                             IdentityLookup identities,
+                             IdentityResolver identities,
                              VoiceSync sync,
                              LangManager lang,
                              ProxyServer proxy,
@@ -102,7 +102,7 @@ public final class ProxyVoiceCommand {
             duration = parsed.get();
         }
 
-        UUID internalId = identities.resolve(target.get().getUniqueId()).internalId();
+        UUID internalId = identities.resolveThrough(target.get().getUniqueId()).internalId();
         try {
             VoiceBan ban = bans.ban(internalId, reason, internalIdOf(source), duration);
             sync.publishInvalidate(internalId);
@@ -124,7 +124,7 @@ public final class ProxyVoiceCommand {
             source.sendMessage(lang.get("command.unknown-player", localeOf(source), "name", name));
             return;
         }
-        UUID internalId = identities.resolve(target.get().getUniqueId()).internalId();
+        UUID internalId = identities.resolveThrough(target.get().getUniqueId()).internalId();
         try {
             boolean lifted = bans.unban(internalId, internalIdOf(source));
             sync.publishInvalidate(internalId);
@@ -143,12 +143,12 @@ public final class ProxyVoiceCommand {
             source.sendMessage(lang.get("command.unknown-player", localeOf(source), "name", name));
             return;
         }
-        IdentityLookup.Resolved resolved = identities.resolve(target.get().getUniqueId());
+        IdentityResolver.Resolved resolved = identities.resolveThrough(target.get().getUniqueId());
         Optional<VoiceBan> ban = bans.activeBan(resolved.internalId());
         if (ban.isEmpty()) {
             source.sendMessage(lang.get("command.check.clear", localeOf(source),
                     "name", target.get().getUsername(),
-                    "tier", resolved.tier() == null ? "unknown" : resolved.tier()));
+                    "tier", resolved.tier() == null ? "unknown" : resolved.tier().name()));
             return;
         }
         VoiceBan active = ban.get();
@@ -161,7 +161,7 @@ public final class ProxyVoiceCommand {
     }
 
     private UUID internalIdOf(CommandSource source) {
-        return source instanceof Player player ? identities.resolve(player.getUniqueId()).internalId() : null;
+        return source instanceof Player player ? identities.resolveThrough(player.getUniqueId()).internalId() : null;
     }
 
     private static Locale localeOf(CommandSource source) {

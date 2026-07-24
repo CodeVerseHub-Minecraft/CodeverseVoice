@@ -6,6 +6,12 @@ plugins {
 dependencies {
     implementation(project(":common"))
 
+    // A backend has no proxy to provide the API, so it ships the jdbc identity
+    // implementation, which drags the interfaces in with it. This is the
+    // opposite of the proxy module, where those same classes are runtime
+    // provided and deliberately excluded from the jar.
+    implementation("com.github.CodeVerseHub-Minecraft.CodeverseAPI:jdbc:0.2.0")
+
     compileOnly("io.papermc.paper:paper-api:26.2.build.65-beta")
     compileOnly("de.maxhenkel.voicechat:voicechat-api:2.6.20")
     compileOnly("net.luckperms:api:5.5")

@@ -16,6 +16,19 @@ libraries. Their licenses apply to those portions.
 | Reactive Streams | 1.0.4 | MIT-0 |
 | Gson | 2.11.0 | Apache License 2.0 |
 | SLF4J API | 2.0.17 | MIT License |
+| CodeverseAPI (`api`) | 0.2.0 | MIT License |
+| CodeverseAPI (`jdbc`) | 0.2.0 | MIT License |
+
+The two CodeverseAPI artifacts are bundled only in the Paper jar and
+deliberately not relocated. A backend has no proxy to provide the shared
+contract, so it ships the jdbc identity implementation, which brings the api
+interfaces with it. They stay at their canonical package so that any other
+backend plugin resolves the same classes.
+
+The Velocity jar excludes both. On the proxy the interfaces are provided at
+runtime by CodeverseAuth, and shipping a second copy would give this plugin a
+different provider from the one CodeverseAuth registered into, so its voice
+service would register where nothing could find it.
 
 No JDBC driver is bundled. The Paper and Velocity platforms both provide one,
 and shipping another would mean including a GPL component in an MIT project for

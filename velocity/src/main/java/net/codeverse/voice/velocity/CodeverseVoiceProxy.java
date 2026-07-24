@@ -9,9 +9,10 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import net.codeverse.voice.config.PluginConfig;
 import net.codeverse.voice.lang.LangManager;
+import net.codeverse.jdbc.JdbcIdentityService;
 import net.codeverse.voice.moderation.VoiceBanService;
 import net.codeverse.voice.storage.Database;
-import net.codeverse.voice.storage.IdentityLookup;
+import net.codeverse.voice.storage.IdentityResolver;
 import net.codeverse.voice.storage.VoiceBanRepository;
 import net.codeverse.voice.sync.VoiceSync;
 import org.slf4j.Logger;
@@ -35,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 @Plugin(
         id = "codeverse-voice-proxy",
         name = "Codeverse Voice Proxy",
-        version = "0.1.0",
+        version = "0.3.0",
         description = "Network wide voice moderation commands for Velocity",
         authors = {"CodeVerseHub-Minecraft Subteam"}
 )
@@ -52,6 +53,8 @@ public final class CodeverseVoiceProxy {
     private Database database;
     private VoiceSync sync;
     private VoiceBanService bans;
+    private JdbcIdentityService identityService;
+    private java.util.concurrent.ExecutorService identityExecutor;
 
     @Inject
     public CodeverseVoiceProxy(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory) {
@@ -71,14 +74,29 @@ public final class CodeverseVoiceProxy {
             database.applySchema();
 
             VoiceBanRepository repository = new VoiceBanRepository(database);
-            IdentityLookup identities = new IdentityLookup(database, config.identity);
-            if (config.identity.useAuthPluginIdentities && !identities.probe()) {
+
+            // The proxy resolves identity from the database directly rather
+            // than through the API that CodeverseAuth registers. The two would
+            // usually agree, but depending on the registration would couple
+            // this plugin's startup to another plugin's load order, and a
+            // missing provider would leave moderation unable to resolve anyone.
+            // Reading the shared rows is the same answer without that coupling.
+            identityExecutor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
+            identityService = new JdbcIdentityService(
+                    database.dataSource(),
+                    identityExecutor,
+                    config.identity.accountsTable,
+                    java.time.Duration.ofSeconds(Math.max(30, config.identity.cacheSeconds)));
+
+            boolean linkage = config.identity.useAuthPluginIdentities && identityService.probe();
+            if (config.identity.useAuthPluginIdentities && !linkage) {
                 logger.error("The accounts table '{}' could not be read. Restrictions issued here will be keyed "
                                 + "to individual Minecraft accounts rather than network identities.",
                         config.identity.accountsTable);
             }
+            IdentityResolver identities = new IdentityResolver(identityService, linkage);
 
-            bans = new VoiceBanService(repository, identities, config.access);
+            bans = new VoiceBanService(repository, identityService, linkage, config.access);
 
             sync = new VoiceSync(config.redis);
             if (config.redis.enabled && !sync.start(bans::invalidate, bans::invalidateAll)) {
@@ -113,6 +131,9 @@ public final class CodeverseVoiceProxy {
     private void shutdown() {
         if (sync != null) {
             sync.close();
+        }
+        if (identityExecutor != null) {
+            identityExecutor.shutdownNow();
         }
         if (database != null) {
             database.close();

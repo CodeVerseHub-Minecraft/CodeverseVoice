@@ -4,7 +4,7 @@ import net.codeverse.voice.model.VoiceBan;
 import net.codeverse.voice.moderation.VoiceBanService;
 import net.codeverse.voice.paper.hook.VoiceHooks;
 import net.codeverse.voice.paper.notify.NotificationService;
-import net.codeverse.voice.storage.IdentityLookup;
+import net.codeverse.voice.storage.IdentityResolver;
 import net.codeverse.voice.util.DurationParser;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
@@ -26,14 +26,14 @@ import java.util.UUID;
 public final class PlayerSessionListener implements Listener {
 
     private final VoiceBanService bans;
-    private final IdentityLookup identities;
+    private final IdentityResolver identities;
     private final NotificationService notifications;
     private final VoiceHooks hooks;
     private final org.bukkit.plugin.Plugin plugin;
 
     public PlayerSessionListener(org.bukkit.plugin.Plugin plugin,
                                  VoiceBanService bans,
-                                 IdentityLookup identities,
+                                 IdentityResolver identities,
                                  NotificationService notifications,
                                  VoiceHooks hooks) {
         this.plugin = plugin;
@@ -48,10 +48,13 @@ public final class PlayerSessionListener implements Listener {
         UUID minecraftId = event.getPlayer().getUniqueId();
 
         // Resolving identity and restriction reads the database, so it happens
-        // off the main thread. The join itself is never delayed by it.
+        // off the main thread. The join itself is never delayed by it. This
+        // read through also warms the identity cache, which is what lets the
+        // voice packet path find an answer waiting rather than falling back to
+        // the Minecraft uuid on the first words someone speaks.
         Bukkit.getScheduler().runTaskAsynchronously(
                 plugin, () -> {
-                    UUID internalId = identities.resolve(minecraftId).internalId();
+                    UUID internalId = identities.resolveAsync(minecraftId).join().internalId();
                     Optional<VoiceBan> ban = bans.activeBan(internalId);
                     if (ban.isEmpty() || !ban.get().isEnforceable(System.currentTimeMillis())) {
                         return;
