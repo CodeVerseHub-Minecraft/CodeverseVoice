@@ -126,9 +126,9 @@ class LangFilesTest {
     @Test
     void everyVoiceStateHasAMessage() {
         Map<String, String> english = load("en");
-        for (net.codeverse.voice.model.VoiceState state : net.codeverse.voice.model.VoiceState.values()) {
-            assertTrue(english.containsKey(state.messageKey()),
-                    "no message defined for " + state + " (key " + state.messageKey() + ")");
+        for (net.codeverse.api.voice.VoiceAccess state : net.codeverse.api.voice.VoiceAccess.values()) {
+            assertTrue(english.containsKey(net.codeverse.voice.lang.VoiceDenial.messageKey(state)),
+                    "no message defined for " + state + " (key " + net.codeverse.voice.lang.VoiceDenial.messageKey(state) + ")");
         }
     }
 

@@ -1,15 +1,27 @@
 package net.codeverse.voice.model;
 
+import net.codeverse.api.voice.VoiceRestriction;
+
+import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
- * A restriction on a person's ability to speak in voice chat.
+ * A voice restriction as it is stored, distinct from how it is exposed.
  *
- * Keyed by internal id rather than Minecraft uuid so that the restriction
- * follows the person across every account linked to them. Banning the
- * Minecraft uuid instead would let anyone evade by switching between their
- * Java and Bedrock accounts, which on a network that deliberately accepts
- * both is not a theoretical gap.
+ * The shared API speaks {@link VoiceRestriction}, which uses Instant and
+ * Optional. Storage predates that contract and speaks epoch millis with a
+ * sentinel zero for permanent and a nullable issuer, which is what the schema
+ * holds and what the repository reads and writes. Keeping the two separate
+ * means the migration onto the API did not have to touch a single line of SQL
+ * or reserialise a single existing row: this record maps between the stored
+ * shape and the exposed one at exactly one boundary.
+ *
+ * Keyed by internal id rather than Minecraft uuid so the restriction follows
+ * the person across every account linked to them. Restricting the Minecraft
+ * uuid instead would let anyone evade by switching between their Java and
+ * Bedrock accounts, which on a network that deliberately accepts both is not
+ * a theoretical gap.
  *
  * @param internalId  identity the restriction applies to
  * @param reason      staff supplied reason, shown to the person
@@ -70,5 +82,22 @@ public record VoiceBan(
 
     public VoiceBan lifted() {
         return new VoiceBan(internalId, reason, issuedBy, issuedAt, expiresAt, false);
+    }
+
+    /**
+     * The same restriction in the API's vocabulary.
+     *
+     * The sentinel zero for permanent becomes an empty optional, and a null
+     * issuer becomes an empty optional, so that a consumer of the API never
+     * has to know the storage encoding to read a restriction correctly.
+     */
+    public VoiceRestriction toApi() {
+        return new VoiceRestriction(
+                internalId,
+                reason,
+                Optional.ofNullable(issuedBy),
+                Instant.ofEpochMilli(issuedAt),
+                isPermanent() ? Optional.empty() : Optional.of(Instant.ofEpochMilli(expiresAt)),
+                active);
     }
 }

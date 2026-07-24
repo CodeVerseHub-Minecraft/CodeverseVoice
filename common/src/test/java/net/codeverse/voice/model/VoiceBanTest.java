@@ -65,4 +65,33 @@ class VoiceBanTest {
         assertThrows(IllegalArgumentException.class,
                 () -> new VoiceBan(IDENTITY, "reason", null, ISSUED, ISSUED, true));
     }
+
+    @Test
+    void mapsToApiRestrictionPreservingEveryField() {
+        UUID issuer = UUID.randomUUID();
+        VoiceBan ban = new VoiceBan(IDENTITY, "harassment", issuer, ISSUED, ISSUED + 60_000L, true);
+
+        net.codeverse.api.voice.VoiceRestriction api = ban.toApi();
+
+        assertEquals(IDENTITY, api.internalId());
+        assertEquals("harassment", api.reason());
+        assertEquals(java.util.Optional.of(issuer), api.issuedBy());
+        assertEquals(java.time.Instant.ofEpochMilli(ISSUED), api.issuedAt());
+        assertEquals(java.util.Optional.of(java.time.Instant.ofEpochMilli(ISSUED + 60_000L)), api.expiresAt());
+        assertTrue(api.active());
+    }
+
+    @Test
+    void mapsStorageSentinelsToApiAbsences() {
+        // A null issuer becomes an empty optional and the zero permanent
+        // sentinel becomes an empty expiry, so a consumer of the API never
+        // has to know the storage encoding to read a restriction correctly.
+        VoiceBan consolePermanent = new VoiceBan(IDENTITY, "console ban", null, ISSUED, 0L, true);
+
+        net.codeverse.api.voice.VoiceRestriction api = consolePermanent.toApi();
+
+        assertEquals(java.util.Optional.empty(), api.issuedBy());
+        assertEquals(java.util.Optional.empty(), api.expiresAt());
+        assertTrue(api.isPermanent());
+    }
 }

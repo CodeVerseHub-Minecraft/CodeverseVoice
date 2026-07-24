@@ -2,10 +2,12 @@ package net.codeverse.voice.moderation;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import net.codeverse.api.identity.Identity;
+import net.codeverse.api.identity.IdentityService;
+import net.codeverse.api.identity.TrustTier;
+import net.codeverse.api.voice.VoiceAccess;
 import net.codeverse.voice.config.PluginConfig;
 import net.codeverse.voice.model.VoiceBan;
-import net.codeverse.voice.model.VoiceState;
-import net.codeverse.voice.storage.IdentityLookup;
 import net.codeverse.voice.storage.VoiceBanRepository;
 
 import java.sql.SQLException;
@@ -22,7 +24,9 @@ import java.util.function.Predicate;
  * The decision runs on every microphone packet, fifty times a second per
  * speaker, so it must never touch the database on the hot path. Active
  * restrictions are cached and the cache is invalidated on change, both locally
- * and across servers.
+ * and across servers. Identity comes from the shared API rather than a private
+ * lookup, so the same rows the authentication plugin writes are the rows read
+ * here, and a person's linked accounts resolve to one identity.
  *
  * The evaluation order matters. Identity is resolved first because every other
  * check depends on knowing who this is, and an unresolvable identity is denied
@@ -33,13 +37,18 @@ import java.util.function.Predicate;
 public final class VoiceBanService {
 
     private final VoiceBanRepository repository;
-    private final IdentityLookup identities;
+    private final IdentityService identities;
     private final PluginConfig.Access access;
+    private final boolean linkageAvailable;
     private final Cache<UUID, Optional<VoiceBan>> banCache;
 
-    public VoiceBanService(VoiceBanRepository repository, IdentityLookup identities, PluginConfig.Access access) {
+    public VoiceBanService(VoiceBanRepository repository,
+                           IdentityService identities,
+                           boolean linkageAvailable,
+                           PluginConfig.Access access) {
         this.repository = repository;
         this.identities = identities;
+        this.linkageAvailable = linkageAvailable;
         this.access = access;
         this.banCache = Caffeine.newBuilder()
                 .maximumSize(5_000)
@@ -48,24 +57,31 @@ public final class VoiceBanService {
     }
 
     /**
-     * Evaluates whether a connection may speak.
+     * Evaluates whether a connection may speak, on the calling thread.
      *
-     * @param minecraftId       the connecting account
-     * @param permissionCheck   tests a permission node against that account
+     * Reads only what is already cached. The voice packet path calls this
+     * fifty times a second and cannot afford a database round trip or a future
+     * to complete, so an identity that has not been resolved yet is reported
+     * as unknown and therefore denied. The session listener warms the cache on
+     * join precisely so that this path finds an answer waiting.
+     *
+     * @param minecraftId     the connecting account
+     * @param permissionCheck tests a permission node against that account
      */
-    public VoiceState evaluate(UUID minecraftId, Predicate<String> permissionCheck) {
-        IdentityLookup.Resolved resolved = identities.resolve(minecraftId);
-        boolean banned = activeBan(resolved.internalId())
+    public VoiceAccess evaluate(UUID minecraftId, Predicate<String> permissionCheck) {
+        Optional<Identity> identity = identities.cachedByMinecraftId(minecraftId);
+        UUID internalId = identity.map(Identity::internalId).orElse(minecraftId);
+        boolean restricted = activeBan(internalId)
                 .map(ban -> ban.isEnforceable(System.currentTimeMillis()))
                 .orElse(false);
 
         return decide(
                 access,
-                resolved.tier(),
-                resolved.known(),
-                identities.isUsingAuthIdentities(),
+                identity.map(Identity::tier).orElse(null),
+                identity.isPresent(),
+                linkageAvailable,
                 permissionCheck.test(access.speakPermission),
-                banned);
+                restricted);
     }
 
     /**
@@ -78,35 +94,35 @@ public final class VoiceBanService {
      * capability handed to an unknown identity cannot be taken back from the
      * right person afterwards.
      *
-     * @param tier              stored trust tier, null when the account is unknown
-     * @param identityKnown     whether the identity came from the accounts table
-     * @param usingAuthIdentity whether identity linkage is available at all
+     * @param tier               trust tier, null when the account is unknown
+     * @param identityKnown      whether the identity was resolved
+     * @param usingAuthIdentity  whether identity linkage is available at all
      * @param hasSpeakPermission whether the speak permission is held
-     * @param hasEnforceableBan whether an active restriction applies
+     * @param hasEnforceableBan  whether an active restriction applies
      */
-    public static VoiceState decide(PluginConfig.Access access,
-                                    String tier,
-                                    boolean identityKnown,
-                                    boolean usingAuthIdentity,
-                                    boolean hasSpeakPermission,
-                                    boolean hasEnforceableBan) {
+    public static VoiceAccess decide(PluginConfig.Access access,
+                                     TrustTier tier,
+                                     boolean identityKnown,
+                                     boolean usingAuthIdentity,
+                                     boolean hasSpeakPermission,
+                                     boolean hasEnforceableBan) {
         if (access.requireVerifiedOrigin && usingAuthIdentity && !identityKnown) {
-            return VoiceState.UNKNOWN_IDENTITY;
+            return VoiceAccess.UNKNOWN_IDENTITY;
         }
         if (access.requireVerifiedOrigin && tier != null && !isTrustedTier(access, tier)) {
-            return VoiceState.UNTRUSTED;
+            return VoiceAccess.UNTRUSTED;
         }
         if (!hasSpeakPermission) {
-            return VoiceState.NO_PERMISSION;
+            return VoiceAccess.NO_PERMISSION;
         }
         if (hasEnforceableBan) {
-            return VoiceState.BANNED;
+            return VoiceAccess.RESTRICTED;
         }
-        return VoiceState.ALLOWED;
+        return VoiceAccess.ALLOWED;
     }
 
-    private static boolean isTrustedTier(PluginConfig.Access access, String tier) {
-        String normalised = tier.toUpperCase(Locale.ROOT);
+    private static boolean isTrustedTier(PluginConfig.Access access, TrustTier tier) {
+        String normalised = tier.name();
         for (String trusted : access.trustedTiers) {
             if (trusted.toUpperCase(Locale.ROOT).equals(normalised)) {
                 return true;

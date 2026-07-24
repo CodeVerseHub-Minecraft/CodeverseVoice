@@ -1,7 +1,8 @@
 package net.codeverse.voice.moderation;
 
+import net.codeverse.api.identity.TrustTier;
+import net.codeverse.api.voice.VoiceAccess;
 import net.codeverse.voice.config.PluginConfig;
-import net.codeverse.voice.model.VoiceState;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -36,18 +37,18 @@ class VoiceAccessDecisionTest {
 
     @Test
     void verifiedAccountWithPermissionAndNoBanMaySpeak() {
-        assertEquals(VoiceState.ALLOWED,
-                VoiceBanService.decide(strict(), "PREMIUM", true, true, true, false));
-        assertEquals(VoiceState.ALLOWED,
-                VoiceBanService.decide(strict(), "BEDROCK", true, true, true, false));
-        assertEquals(VoiceState.ALLOWED,
-                VoiceBanService.decide(strict(), "DISCORD_LINKED", true, true, true, false));
+        assertEquals(VoiceAccess.ALLOWED,
+                VoiceBanService.decide(strict(), TrustTier.PREMIUM, true, true, true, false));
+        assertEquals(VoiceAccess.ALLOWED,
+                VoiceBanService.decide(strict(), TrustTier.BEDROCK, true, true, true, false));
+        assertEquals(VoiceAccess.ALLOWED,
+                VoiceBanService.decide(strict(), TrustTier.DISCORD_LINKED, true, true, true, false));
     }
 
     @Test
     void crackedAccountsAreRefused() {
-        assertEquals(VoiceState.UNTRUSTED,
-                VoiceBanService.decide(strict(), "CRACKED", true, true, true, false));
+        assertEquals(VoiceAccess.UNTRUSTED,
+                VoiceBanService.decide(strict(), TrustTier.CRACKED, true, true, true, false));
     }
 
     @Test
@@ -55,14 +56,14 @@ class VoiceAccessDecisionTest {
         // A cracked account that has somehow been granted the speak permission
         // is still refused, and the reported reason is the tier rather than the
         // permission, so staff can see the group is wrong.
-        assertEquals(VoiceState.UNTRUSTED,
-                VoiceBanService.decide(strict(), "CRACKED", true, true, true, false));
+        assertEquals(VoiceAccess.UNTRUSTED,
+                VoiceBanService.decide(strict(), TrustTier.CRACKED, true, true, true, false));
     }
 
     @Test
     void unresolvedIdentityIsRefusedBeforeAnythingElseIsConsidered() {
         // Permission held, no ban, but the identity is unknown. Refused.
-        assertEquals(VoiceState.UNKNOWN_IDENTITY,
+        assertEquals(VoiceAccess.UNKNOWN_IDENTITY,
                 VoiceBanService.decide(strict(), null, false, true, true, false));
     }
 
@@ -71,55 +72,54 @@ class VoiceAccessDecisionTest {
         // With no accounts table present, every account is unknown by
         // definition, so refusing them all would take voice away from the
         // entire server rather than degrading gracefully.
-        assertEquals(VoiceState.ALLOWED,
+        assertEquals(VoiceAccess.ALLOWED,
                 VoiceBanService.decide(strict(), null, false, false, true, false));
     }
 
     @Test
     void missingPermissionIsRefused() {
-        assertEquals(VoiceState.NO_PERMISSION,
-                VoiceBanService.decide(strict(), "PREMIUM", true, true, false, false));
+        assertEquals(VoiceAccess.NO_PERMISSION,
+                VoiceBanService.decide(strict(), TrustTier.PREMIUM, true, true, false, false));
     }
 
     @Test
     void activeRestrictionIsRefused() {
-        assertEquals(VoiceState.BANNED,
-                VoiceBanService.decide(strict(), "PREMIUM", true, true, true, true));
-    }
-
-    @Test
-    void tierComparisonIgnoresCase() {
-        assertEquals(VoiceState.ALLOWED,
-                VoiceBanService.decide(strict(), "premium", true, true, true, false));
-        assertEquals(VoiceState.ALLOWED,
-                VoiceBanService.decide(strict(), "Bedrock", true, true, true, false));
+        assertEquals(VoiceAccess.RESTRICTED,
+                VoiceBanService.decide(strict(), TrustTier.PREMIUM, true, true, true, true));
     }
 
     @Test
     void relaxedModeSkipsTierAndIdentityChecks() {
-        assertEquals(VoiceState.ALLOWED,
-                VoiceBanService.decide(relaxed(), "CRACKED", false, true, true, false));
+        assertEquals(VoiceAccess.ALLOWED,
+                VoiceBanService.decide(relaxed(), TrustTier.CRACKED, false, true, true, false));
         // Restrictions and permissions still apply.
-        assertEquals(VoiceState.BANNED,
-                VoiceBanService.decide(relaxed(), "CRACKED", false, true, true, true));
-        assertEquals(VoiceState.NO_PERMISSION,
-                VoiceBanService.decide(relaxed(), "CRACKED", false, true, false, false));
+        assertEquals(VoiceAccess.RESTRICTED,
+                VoiceBanService.decide(relaxed(), TrustTier.CRACKED, false, true, true, true));
+        assertEquals(VoiceAccess.NO_PERMISSION,
+                VoiceBanService.decide(relaxed(), TrustTier.CRACKED, false, true, false, false));
     }
 
+    /**
+     * A tier this plugin has never heard of, perhaps added by a newer
+     * authentication release, is resolved to CRACKED upstream in the identity
+     * layer rather than reaching this decision as an unknown string. So the
+     * fail closed behaviour is that an unrecognised tier arrives here already
+     * degraded to the least trusted, and is refused on that basis.
+     */
     @Test
-    void anUnrecognisedTierIsTreatedAsUntrusted() {
-        // A tier this plugin has never heard of, perhaps added by a newer
-        // authentication release, is refused rather than assumed safe.
-        assertEquals(VoiceState.UNTRUSTED,
-                VoiceBanService.decide(strict(), "SOME_FUTURE_TIER", true, true, true, false));
+    void anUnrecognisedTierDegradesToCrackedAndIsRefused() {
+        assertEquals(java.util.Optional.of(TrustTier.CRACKED),
+                java.util.Optional.of(TrustTier.parse("SOME_FUTURE_TIER").orElse(TrustTier.CRACKED)));
+        assertEquals(VoiceAccess.UNTRUSTED,
+                VoiceBanService.decide(strict(), TrustTier.CRACKED, true, true, true, false));
     }
 
     @Test
     void everyDenialIsDistinguishableSoPlayersAreToldTheRightThing() {
-        VoiceState untrusted = VoiceBanService.decide(strict(), "CRACKED", true, true, true, false);
-        VoiceState noPermission = VoiceBanService.decide(strict(), "PREMIUM", true, true, false, false);
-        VoiceState banned = VoiceBanService.decide(strict(), "PREMIUM", true, true, true, true);
-        VoiceState unknown = VoiceBanService.decide(strict(), null, false, true, true, false);
+        VoiceAccess untrusted = VoiceBanService.decide(strict(), TrustTier.CRACKED, true, true, true, false);
+        VoiceAccess noPermission = VoiceBanService.decide(strict(), TrustTier.PREMIUM, true, true, false, false);
+        VoiceAccess banned = VoiceBanService.decide(strict(), TrustTier.PREMIUM, true, true, true, true);
+        VoiceAccess unknown = VoiceBanService.decide(strict(), null, false, true, true, false);
 
         assertEquals(4, java.util.Set.of(untrusted, noPermission, banned, unknown).size());
     }

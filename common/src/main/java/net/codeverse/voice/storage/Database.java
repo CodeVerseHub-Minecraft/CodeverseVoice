@@ -44,6 +44,11 @@ public final class Database implements AutoCloseable {
         return dataSource.getConnection();
     }
 
+    /** The shared pool, for building a JdbcIdentityService over the same connections. */
+    public javax.sql.DataSource dataSource() {
+        return dataSource;
+    }
+
     public String table(String name) {
         return prefix + name;
     }

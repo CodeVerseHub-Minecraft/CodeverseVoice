@@ -6,10 +6,11 @@ subprojects {
     apply(plugin = "java")
 
     group = "net.codeverse"
-    version = "0.2.0"
+    version = "0.3.0"
 
     repositories {
         mavenCentral()
+        maven("https://jitpack.io")
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://maven.maxhenkel.de/repository/public/")
         maven("https://repo.extendedclip.com/releases/")
