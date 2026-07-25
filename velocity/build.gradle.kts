@@ -10,10 +10,14 @@ dependencies {
     // CodeverseAuth, so this module must compile against them but never ship
     // them. Bundling a second copy would give this plugin a different
     // CodeverseApiProvider from the one CodeverseAuth registered into, and the
-    // voice service would be registered where nothing could find it. The jdbc
-    // implementation has no place here either: the proxy resolves identity
-    // through the registered service, not by reaching into the database.
+    // voice service would be registered where nothing could find it.
+    //
+    // The jdbc implementation is a different matter and does ship, through
+    // common. This module constructs JdbcIdentityService directly so its
+    // startup does not depend on Auth having registered first, and nothing on
+    // the proxy would otherwise supply that class.
     compileOnly("com.github.CodeVerseHub-Minecraft.CodeverseAPI:api:0.2.0")
+    implementation("com.github.CodeVerseHub-Minecraft:CodeverseUpdater:v0.1.2")
 
     compileOnly("com.velocitypowered:velocity-api:4.0.0")
     annotationProcessor("com.velocitypowered:velocity-api:4.0.0")
@@ -35,12 +39,25 @@ tasks.shadowJar {
     relocate("io.lettuce", "net.codeverse.voice.libs.lettuce")
     relocate("com.google.gson", "net.codeverse.voice.libs.gson")
 
-    // common exposes the API coordinate transitively, but on the proxy it is a
-    // runtime provided type. Dropping it from the jar keeps this plugin bound
-    // to the copy CodeverseAuth registered rather than a private duplicate.
+    // The api interfaces are provided at runtime by CodeverseAuth, so dropping
+    // them from this jar keeps this plugin bound to the copy Auth registered
+    // rather than a private duplicate. That matters only for the api artifact,
+    // because CodeverseApiProvider holds a static registration: a second copy
+    // of that class would be a second registry, and the voice service would
+    // register where nothing could find it.
+    //
+    // The jdbc artifact is deliberately NOT excluded. It is a plain
+    // implementation with no static registration, this module constructs
+    // JdbcIdentityService directly to avoid coupling its startup to Auth's
+    // load order, and nothing on the proxy supplies it: Auth ships api but not
+    // jdbc. Excluding it produced a jar whose proxy class referenced a type
+    // absent from the runtime, which is a NoClassDefFoundError on
+    // ProxyInitializeEvent, and an Error rather than an Exception, so the
+    // startup catch missed it and the pool leaked. Its own references to api
+    // types resolve to Auth's copy through cross plugin class loading, which
+    // is exactly the sharing that is wanted.
     dependencies {
         exclude(dependency("com.github.CodeVerseHub-Minecraft.CodeverseAPI:api"))
-        exclude(dependency("com.github.CodeVerseHub-Minecraft.CodeverseAPI:jdbc"))
     }
 
     mergeServiceFiles()

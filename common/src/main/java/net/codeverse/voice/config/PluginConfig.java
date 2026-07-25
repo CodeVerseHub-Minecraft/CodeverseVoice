@@ -280,6 +280,10 @@ public final class PluginConfig {
         // moderation, and an unattended swap of an enforcement plugin is not
         // worth the convenience.
         public boolean autoApply = false;
+        // How often the check repeats while the server is up. A server that
+        // runs for a fortnight would otherwise never see a release published an
+        // hour after it booted.
+        public int checkIntervalHours = 6;
     }
 
     public static final class Language {

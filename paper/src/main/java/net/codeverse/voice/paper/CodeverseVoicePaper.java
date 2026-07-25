@@ -135,8 +135,14 @@ public final class CodeverseVoicePaper extends JavaPlugin {
                 // exactly where the platform expects it.
                 String version = getPluginMeta().getVersion();
                 Path updateFolder = getServer().getUpdateFolderFile().toPath();
-                Bukkit.getScheduler().runTaskAsynchronously(this, () -> UpdateCheck.run(
-                        version, updateFolder, config.updates.autoApply, Runnable::run, LOGGER));
+                // Repeats rather than running once, so a server that stays up
+                // for a fortnight still learns about a release published an
+                // hour after it booted.
+                long periodTicks = Math.max(1L, config.updates.checkIntervalHours) * 60L * 60L * 20L;
+                Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> UpdateCheck.run(
+                                version, updateFolder, config.updates.autoApply,
+                                config.updates.checkIntervalHours, Runnable::run, LOGGER),
+                        20L, periodTicks);
             }
 
             LOGGER.info("Voice moderation ready in {} mode. Identities {}, recording {}, monitoring {}, locales {}",

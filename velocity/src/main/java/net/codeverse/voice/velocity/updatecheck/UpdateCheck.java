@@ -1,4 +1,4 @@
-package net.codeverse.voice.paper.updatecheck;
+package net.codeverse.voice.velocity.updatecheck;
 
 import net.codeverse.updater.UpdateResult;
 import net.codeverse.updater.Updater;
@@ -10,12 +10,12 @@ import java.time.Duration;
 import java.util.concurrent.Executor;
 
 /**
- * Wires the update library into the voice plugin, so startup stays short.
+ * The proxy half of the voice update check.
  *
- * Reports each outcome the library distinguishes. Auto apply defaults off, the
- * same conservative default the other Codeverse plugins take, since a voice
- * plugin still enforces moderation and an unattended swap of an enforcement
- * plugin is not worth the convenience.
+ * Separate from the Paper helper because the two platforms take different jars
+ * from the same release. Staging the backend jar onto a proxy would replace a
+ * working plugin with one that cannot load, so the jar name is the part that
+ * must not be shared between them.
  */
 public final class UpdateCheck {
 
@@ -32,10 +32,8 @@ public final class UpdateCheck {
                 .forRepository("CodeVerseHub-Minecraft", "CodeverseVoice")
                 .currentVersion(currentVersion)
                 .updateFolder(updateFolder)
-                .targetJarName("CodeverseVoice-Paper-" + currentVersion + ".jar")
+                .targetJarName("CodeverseVoice-Velocity-" + currentVersion + ".jar")
                 .autoApply(autoApply)
-                // The same interval the caller schedules with, so the
-                // library's view and the actual cadence cannot disagree.
                 .checkInterval(Duration.ofHours(checkIntervalHours))
                 .build());
 

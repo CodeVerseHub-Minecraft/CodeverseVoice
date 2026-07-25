@@ -10,6 +10,7 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import net.codeverse.voice.config.PluginConfig;
 import net.codeverse.voice.lang.LangManager;
 import net.codeverse.jdbc.JdbcIdentityService;
+import net.codeverse.voice.velocity.updatecheck.UpdateCheck;
 import net.codeverse.voice.moderation.VoiceBanService;
 import net.codeverse.voice.storage.Database;
 import net.codeverse.voice.storage.IdentityResolver;
@@ -43,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 public final class CodeverseVoiceProxy {
 
     private static final List<String> BUNDLED_LOCALES = List.of("en", "de");
+    private static final String PLUGIN_ID = "codeverse-voice-proxy";
 
     private final ProxyServer proxy;
     private final Logger logger;
@@ -111,6 +113,27 @@ public final class CodeverseVoiceProxy {
             proxy.getScheduler().buildTask(this, () -> bans.sweepExpired())
                     .repeat(15, TimeUnit.MINUTES)
                     .schedule();
+
+            if (config.updates.checkOnStartup) {
+                // The proxy checks separately from the backend even though both
+                // come from one release, because they take different jars from
+                // it. The version is read from the proxy rather than held in a
+                // constant, so it cannot drift from what is actually running.
+                String runningVersion = proxy.getPluginManager().getPlugin(PLUGIN_ID)
+                        .flatMap(container -> container.getDescription().getVersion())
+                        .orElse(null);
+                if (runningVersion == null) {
+                    logger.warn("The proxy did not report this plugin's version, so update checks "
+                            + "are disabled for this session.");
+                } else {
+                    Path updateFolder = dataDirectory.getParent().resolve("update");
+                    proxy.getScheduler().buildTask(this, () -> UpdateCheck.run(
+                                    runningVersion, updateFolder, config.updates.autoApply,
+                                    config.updates.checkIntervalHours, Runnable::run, logger))
+                            .repeat(config.updates.checkIntervalHours, TimeUnit.HOURS)
+                            .schedule();
+                }
+            }
 
             logger.info("Proxy voice moderation ready. Identities {}, sync {}",
                     identities.isUsingAuthIdentities() ? "linked to network accounts" : "per Minecraft account",
