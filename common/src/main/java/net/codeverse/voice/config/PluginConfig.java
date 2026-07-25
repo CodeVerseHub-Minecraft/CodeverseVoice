@@ -38,6 +38,7 @@ public final class PluginConfig {
     public Groups groups = new Groups();
     public Presets presets = new Presets();
     public Language language = new Language();
+    public Updates updates = new Updates();
 
     public static final class Storage {
         public String jdbcUrl = "jdbc:mysql://127.0.0.1:3306/network?useSSL=false&characterEncoding=utf8";
@@ -269,6 +270,16 @@ public final class PluginConfig {
             this.duration = duration;
             this.icon = icon;
         }
+    }
+
+    public static final class Updates {
+        // Whether to check GitHub releases for a newer CodeverseVoice on startup.
+        public boolean checkOnStartup = true;
+        // Whether a found update is downloaded, verified and staged for the next
+        // restart automatically. Off by default: this plugin enforces voice
+        // moderation, and an unattended swap of an enforcement plugin is not
+        // worth the convenience.
+        public boolean autoApply = false;
     }
 
     public static final class Language {

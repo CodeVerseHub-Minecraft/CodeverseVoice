@@ -16,6 +16,7 @@ import net.codeverse.voice.paper.hook.VoiceHooks;
 import net.codeverse.voice.paper.listener.PlayerSessionListener;
 import net.codeverse.voice.paper.notify.NotificationService;
 import net.codeverse.voice.paper.placeholder.VoicePlaceholders;
+import net.codeverse.voice.paper.updatecheck.UpdateCheck;
 import net.codeverse.voice.storage.Database;
 import net.codeverse.voice.storage.IdentityResolver;
 import net.codeverse.voice.storage.VoiceBanRepository;
@@ -27,6 +28,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -125,6 +127,17 @@ public final class CodeverseVoicePaper extends JavaPlugin {
 
             registerCommand();
             scheduleMaintenance();
+
+            if (config.updates.checkOnStartup) {
+                // Runs off the main thread since it makes a network request.
+                // getUpdateFolderFile is the folder Paper swaps a replacement
+                // jar in from on the next restart, so the staged jar lands
+                // exactly where the platform expects it.
+                String version = getPluginMeta().getVersion();
+                Path updateFolder = getServer().getUpdateFolderFile().toPath();
+                Bukkit.getScheduler().runTaskAsynchronously(this, () -> UpdateCheck.run(
+                        version, updateFolder, config.updates.autoApply, Runnable::run, LOGGER));
+            }
 
             LOGGER.info("Voice moderation ready in {} mode. Identities {}, recording {}, monitoring {}, locales {}",
                     hooks.isPresent() ? "full" : "status only",
