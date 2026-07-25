@@ -10,12 +10,13 @@ import java.time.Duration;
 import java.util.concurrent.Executor;
 
 /**
- * The proxy half of the voice update check.
+ * The proxy half of the voice update check. Reports only; it never stages.
  *
- * Separate from the Paper helper because the two platforms take different jars
- * from the same release. Staging the backend jar onto a proxy would replace a
- * working plugin with one that cannot load, so the jar name is the part that
- * must not be shared between them.
+ * Velocity has no update folder. Paper watches plugins/update and swaps a jar
+ * in on the next boot; the proxy has no equivalent, and a jar left in such a
+ * folder is ignored forever. Reporting a staged update that will never apply is
+ * worse than not offering staging, because an operator who believes it is
+ * handled stops checking.
  */
 public final class UpdateCheck {
 
@@ -23,17 +24,21 @@ public final class UpdateCheck {
     }
 
     public static void run(String currentVersion,
-                           Path updateFolder,
-                           boolean autoApply,
+                           Path dataDirectory,
+                           boolean autoApplyRequested,
                            int checkIntervalHours,
                            Executor executor,
                            Logger logger) {
+        if (autoApplyRequested) {
+            logger.warn("updates.autoApply is enabled, but Velocity has no update folder, so a staged "
+                    + "jar would never be applied. Updates will be reported only.");
+        }
         Updater updater = new Updater(UpdaterConfig
                 .forRepository("CodeVerseHub-Minecraft", "CodeverseVoice")
                 .currentVersion(currentVersion)
-                .updateFolder(updateFolder)
+                .updateFolder(dataDirectory)
                 .targetJarName("CodeverseVoice-Velocity-" + currentVersion + ".jar")
-                .autoApply(autoApply)
+                .autoApply(false)
                 .checkInterval(Duration.ofHours(checkIntervalHours))
                 .build());
 
@@ -42,8 +47,9 @@ public final class UpdateCheck {
                 case UpdateResult.UpToDate ignored ->
                         logger.info("CodeverseVoice is up to date.");
                 case UpdateResult.UpdateAvailable available ->
-                        logger.info("CodeverseVoice {} is available (running {}). Auto apply is off, so "
-                                        + "nothing was staged. Update from the release page when ready.",
+                        logger.info("CodeverseVoice {} is available (running {}). Download it from "
+                                        + "https://github.com/CodeVerseHub-Minecraft/CodeverseVoice/releases "
+                                        + "and replace the jar in plugins, then restart.",
                                 available.release().tag(), currentVersion);
                 case UpdateResult.Staged staged ->
                         logger.info("CodeverseVoice {} was downloaded, verified and staged. Restart to apply.",

@@ -11,7 +11,7 @@ dependencies {
     // opposite of the proxy module, where those same classes are runtime
     // provided and deliberately excluded from the jar.
     implementation("com.github.CodeVerseHub-Minecraft.CodeverseAPI:jdbc:0.2.0")
-    implementation("com.github.CodeVerseHub-Minecraft:CodeverseUpdater:v0.1.2")
+    implementation("com.github.CodeVerseHub-Minecraft:CodeverseUpdater:v0.1.4")
 
     compileOnly("io.papermc.paper:paper-api:26.2.build.65-beta")
     compileOnly("de.maxhenkel.voicechat:voicechat-api:2.6.20")

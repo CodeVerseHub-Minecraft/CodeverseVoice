@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
+import com.velocitypowered.api.plugin.Dependency;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -37,9 +38,17 @@ import java.util.concurrent.TimeUnit;
 @Plugin(
         id = "codeverse-voice-proxy",
         name = "Codeverse Voice Proxy",
-        version = "0.3.0",
+        version = "0.3.1",
         description = "Network wide voice moderation commands for Velocity",
-        authors = {"CodeVerseHub-Minecraft Subteam"}
+        authors = {"CodeVerseHub-Minecraft Subteam"},
+        // Not optional. This jar deliberately excludes the shared API classes
+        // so it uses the same copy CodeverseAuth registered, which means
+        // without Auth installed those classes exist nowhere on the proxy and
+        // this plugin cannot load at all. Declaring the dependency makes
+        // Velocity refuse it with a clear message and in the right order,
+        // rather than failing at init with a NoClassDefFoundError that is an
+        // Error and so escapes the startup catch, leaving the pool open.
+        dependencies = {@Dependency(id = "codeverse-auth")}
 )
 public final class CodeverseVoiceProxy {
 
@@ -126,9 +135,8 @@ public final class CodeverseVoiceProxy {
                     logger.warn("The proxy did not report this plugin's version, so update checks "
                             + "are disabled for this session.");
                 } else {
-                    Path updateFolder = dataDirectory.getParent().resolve("update");
                     proxy.getScheduler().buildTask(this, () -> UpdateCheck.run(
-                                    runningVersion, updateFolder, config.updates.autoApply,
+                                    runningVersion, dataDirectory, config.updates.autoApply,
                                     config.updates.checkIntervalHours, Runnable::run, logger))
                             .repeat(config.updates.checkIntervalHours, TimeUnit.HOURS)
                             .schedule();

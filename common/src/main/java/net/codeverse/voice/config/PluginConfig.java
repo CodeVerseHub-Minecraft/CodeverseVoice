@@ -346,6 +346,11 @@ public final class PluginConfig {
         if (monitoring.maximumExtensions < 0) {
             throw new IllegalStateException("monitoring.maximumExtensions cannot be negative");
         }
+        if (updates.checkIntervalHours < 1) {
+            throw new IllegalStateException("updates.checkIntervalHours must be at least 1. Zero or less "
+                    + "would schedule a GitHub request every tick, spending a rate limit shared with every "
+                    + "other Codeverse plugin on this host.");
+        }
         if (access.speakPermission == null || access.speakPermission.isBlank()) {
             throw new IllegalStateException("access.speakPermission cannot be blank");
         }

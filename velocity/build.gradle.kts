@@ -17,7 +17,7 @@ dependencies {
     // startup does not depend on Auth having registered first, and nothing on
     // the proxy would otherwise supply that class.
     compileOnly("com.github.CodeVerseHub-Minecraft.CodeverseAPI:api:0.2.0")
-    implementation("com.github.CodeVerseHub-Minecraft:CodeverseUpdater:v0.1.2")
+    implementation("com.github.CodeVerseHub-Minecraft:CodeverseUpdater:v0.1.4")
 
     compileOnly("com.velocitypowered:velocity-api:4.0.0")
     annotationProcessor("com.velocitypowered:velocity-api:4.0.0")
