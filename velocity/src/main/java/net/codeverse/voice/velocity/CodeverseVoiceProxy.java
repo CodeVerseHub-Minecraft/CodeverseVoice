@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 @Plugin(
         id = "codeverse-voice-proxy",
         name = "Codeverse Voice Proxy",
-        version = "0.3.1",
+        version = "0.3.2",
         description = "Network wide voice moderation commands for Velocity",
         authors = {"CodeVerseHub-Minecraft Subteam"},
         // Not optional. This jar deliberately excludes the shared API classes

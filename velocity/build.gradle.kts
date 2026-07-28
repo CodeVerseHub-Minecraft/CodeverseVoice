@@ -37,6 +37,17 @@ tasks.shadowJar {
     relocate("com.zaxxer.hikari", "net.codeverse.voice.libs.hikari")
     relocate("com.github.benmanes.caffeine", "net.codeverse.voice.libs.caffeine")
     relocate("io.lettuce", "net.codeverse.voice.libs.lettuce")
+    // Netty is relocated along with Lettuce rather than excluded or left alone,
+    // and the reason is subtle enough to be worth stating. Netty keeps its
+    // ChannelOption and AttributeKey constants in a static ConstantPool keyed
+    // by name. Sharing the platform's Netty means sharing that pool, and
+    // Lettuce registers names the platform has already taken, which throws
+    // ExceptionInInitializerError the moment Redis is touched. Excluding Netty
+    // instead only moves the collision, because Lettuce still needs it. Giving
+    // Lettuce its own relocated copy gives it its own pool, so the two cannot
+    // collide at all.
+    relocate("io.netty", "net.codeverse.voice.libs.netty")
+
     relocate("com.google.gson", "net.codeverse.voice.libs.gson")
 
     // The api interfaces are provided at runtime by CodeverseAuth, so dropping
