@@ -16,7 +16,11 @@ dependencies {
     // common. This module constructs JdbcIdentityService directly so its
     // startup does not depend on Auth having registered first, and nothing on
     // the proxy would otherwise supply that class.
-    compileOnly("com.github.CodeVerseHub-Minecraft.CodeverseAPI:api:0.2.0")
+    compileOnly("com.github.CodeVerseHub-Minecraft.CodeverseAPI:api:0.3.0")
+    // Declared here rather than inherited from common, which stopped exposing
+    // it when it moved to compileOnly. The proxy has no CodeverseExtension, so
+    // this module is still the only source of JdbcIdentityService there.
+    implementation("com.github.CodeVerseHub-Minecraft.CodeverseAPI:jdbc:0.3.0")
     implementation("com.github.CodeVerseHub-Minecraft:CodeverseUpdater:v0.1.4")
 
     compileOnly("com.velocitypowered:velocity-api:4.0.0")

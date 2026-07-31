@@ -5,6 +5,7 @@ api-version: '1.21'
 authors: [CodeVerseHub-Minecraft Subteam]
 description: Voice chat moderation with network wide identities, menus and placeholders
 website: https://github.com/CodeVerseHub-Minecraft/CodeverseVoice
+depend: [CodeverseExtension]
 softdepend: [voicechat, LuckPerms, PlaceholderAPI]
 folia-supported: false
 

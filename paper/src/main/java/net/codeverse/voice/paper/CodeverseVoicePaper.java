@@ -1,10 +1,9 @@
 package net.codeverse.voice.paper;
 
 import net.codeverse.api.CodeverseApiProvider;
+import net.codeverse.api.voice.VoiceService;
 import net.codeverse.api.identity.IdentityService;
 import net.codeverse.jdbc.JdbcIdentityService;
-import net.codeverse.voice.api.BackendCodeverseApi;
-import net.codeverse.voice.api.LocalEventBus;
 import net.codeverse.voice.config.PluginConfig;
 import net.codeverse.voice.lang.LangManager;
 import net.codeverse.voice.moderation.CodeverseVoiceService;
@@ -63,8 +62,6 @@ public final class CodeverseVoicePaper extends JavaPlugin {
     private IdentityResolver identities;
     private JdbcIdentityService jdbcIdentities;
     private CodeverseVoiceService voiceService;
-    private BackendCodeverseApi backendApi;
-    private LocalEventBus eventBus;
     private java.util.concurrent.ExecutorService identityExecutor;
     private NotificationService notifications;
     private VoiceHooks hooks = VoiceHooks.ABSENT;
@@ -101,16 +98,25 @@ public final class CodeverseVoicePaper extends JavaPlugin {
             bans = new VoiceBanService(repository, jdbcIdentities, linkage, config.access);
             notifications = new NotificationService(config, lang);
 
-            // A backend enforces, so it registers a VoiceService that reports
-            // isEnforcing true. The shared API is registered here rather than
-            // provided by CodeverseAuth, because CodeverseAuth runs on the
-            // proxy and this is a backend: the jdbc identity service and this
-            // voice service together are this server's whole provider.
-            eventBus = new LocalEventBus(LOGGER);
+            // A backend enforces, so the service this contributes reports
+            // isEnforcing true. Since 0.4.0 this contributes one service rather
+            // than registering the whole API: CodeverseExtension owns that slot
+            // and provides identity, and a second registration here would be a
+            // second registry that nothing else on the server could read.
             voiceService = new CodeverseVoiceService(
                     bans, jdbcIdentities, config.access, linkage, true, identityExecutor);
-            backendApi = new BackendCodeverseApi(jdbcIdentities, voiceService, eventBus);
-            CodeverseApiProvider.register(backendApi);
+            CodeverseApiProvider.registerService(VoiceService.class, voiceService);
+            if (CodeverseApiProvider.find().isEmpty()) {
+                // Extension is a hard dependency, so it is installed and has
+                // enabled before this. An absent registration therefore means
+                // it enabled and then failed, which leaves the contributed
+                // service published where nothing is reading. Worth saying,
+                // and not worth refusing to start over: voice enforcement here
+                // does not depend on anyone reading it.
+                LOGGER.warn("CodeverseExtension has not registered the network API, so the voice "
+                        + "service has been contributed where nothing can currently read it. Voice "
+                        + "moderation on this server is unaffected. Check the extension's startup.");
+            }
 
             sync = new VoiceSync(config.redis);
             if (config.redis.enabled && !sync.start(bans::invalidate, bans::invalidateAll)) {
@@ -233,9 +239,10 @@ public final class CodeverseVoicePaper extends JavaPlugin {
     }
 
     private void shutdownResources() {
-        if (backendApi != null) {
-            CodeverseApiProvider.unregister(backendApi);
-            backendApi = null;
+        if (voiceService != null) {
+            // Withdrawn by identity, so a restart that has already published a
+            // replacement is not left with the slot cleared out from under it.
+            CodeverseApiProvider.unregisterService(VoiceService.class, voiceService);
             voiceService = null;
         }
         if (hooks != null) {

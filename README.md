@@ -142,6 +142,10 @@ If you disable `recording.retentionDays`, have a written retention policy first.
 ## Requirements
 
 - Paper 26.2 or newer, or Velocity 4, on Java 25
+- CodeverseExtension on the backend, which provides the shared contract and
+  identity resolution. A hard dependency since 0.4.0: the Paper jar no longer
+  ships the API itself, and the server will refuse to load this plugin without
+  it rather than start in a state where identity silently does not work
 - MySQL or MariaDB, shared with the other Codeverse plugins
 - Simple Voice Chat, on the server that hosts voice
 - LuckPerms and PlaceholderAPI are optional but expected in practice

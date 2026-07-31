@@ -6,11 +6,12 @@ plugins {
 dependencies {
     implementation(project(":common"))
 
-    // A backend has no proxy to provide the API, so it ships the jdbc identity
-    // implementation, which drags the interfaces in with it. This is the
-    // opposite of the proxy module, where those same classes are runtime
-    // provided and deliberately excluded from the jar.
-    implementation("com.github.CodeVerseHub-Minecraft.CodeverseAPI:jdbc:0.2.0")
+    // Runtime provided by CodeverseExtension, which is a hard dependency in
+    // plugin.yml so Paper both guarantees it enables first and grants this
+    // plugin access to its classes. Shipping our own copy would give this
+    // plugin a private registry that nothing else on the server can read.
+    compileOnly("com.github.CodeVerseHub-Minecraft.CodeverseAPI:api:0.3.0")
+    compileOnly("com.github.CodeVerseHub-Minecraft.CodeverseAPI:jdbc:0.3.0")
     implementation("com.github.CodeVerseHub-Minecraft:CodeverseUpdater:v0.1.4")
 
     compileOnly("io.papermc.paper:paper-api:26.2.build.65-beta")

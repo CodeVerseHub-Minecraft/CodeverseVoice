@@ -13,8 +13,13 @@ dependencies {
     // it. api() rather than implementation() so the platform modules that
     // depend on common can name TrustTier and Identity without redeclaring
     // the coordinate.
-    api("com.github.CodeVerseHub-Minecraft.CodeverseAPI:api:0.2.0")
-    api("com.github.CodeVerseHub-Minecraft.CodeverseAPI:jdbc:0.2.0")
+    // compileOnly rather than api since 0.4.0. CodeverseExtension is now the
+    // single jar that ships the contract on a backend, and a second copy is
+    // not a race to define one class: Paper gives each plugin its own, so two
+    // copies mean two static registries and a service contributed to one is
+    // invisible to a consumer reading the other. Verified by running both.
+    compileOnly("com.github.CodeVerseHub-Minecraft.CodeverseAPI:api:0.3.0")
+    compileOnly("com.github.CodeVerseHub-Minecraft.CodeverseAPI:jdbc:0.3.0")
     implementation("com.zaxxer:HikariCP:7.1.0")
     implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
     implementation("io.lettuce:lettuce-core:7.6.0.RELEASE")
@@ -22,6 +27,10 @@ dependencies {
     compileOnly("net.kyori:adventure-api:5.2.0")
     compileOnly("net.kyori:adventure-text-minimessage:5.2.0")
 
+    // Tests exercise the contract directly, so they need the real classes
+    // rather than the ones provided at runtime by CodeverseExtension.
+    testImplementation("com.github.CodeVerseHub-Minecraft.CodeverseAPI:api:0.3.0")
+    testImplementation("com.github.CodeVerseHub-Minecraft.CodeverseAPI:jdbc:0.3.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testRuntimeOnly("com.mysql:mysql-connector-j:9.7.0")
